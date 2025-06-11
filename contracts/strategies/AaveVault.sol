@@ -5,9 +5,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@aave/core-v3/contracts/interfaces/IPool.sol";
-import "@aave/core-v3/contracts/interfaces/IPoolAddressesProvider.sol";
 import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import "../interfaces/ISimpleAavePool.sol";
 
 /**
  * @title AaveVault
@@ -16,8 +15,8 @@ import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.so
 contract AaveVault is ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;
 
-    // Aave interfaces
-    IPool public immutable POOL;
+    // Aave pool interface
+    ISimpleAavePool public immutable POOL;
     
     // Token addresses
     address public immutable UNDERLYING_TOKEN;
@@ -56,7 +55,7 @@ contract AaveVault is ReentrancyGuard, Ownable {
 
         UNDERLYING_TOKEN = _underlyingToken;
         ATOKEN = _aToken;
-        POOL = IPool(_aavePool);
+        POOL = ISimpleAavePool(_aavePool);
         PRICE_FEED = AggregatorV3Interface(_priceFeed);
 
         // Approve Aave pool to spend tokens
@@ -73,8 +72,15 @@ contract AaveVault is ReentrancyGuard, Ownable {
         // Transfer tokens from sender
         IERC20(UNDERLYING_TOKEN).safeTransferFrom(msg.sender, address(this), amount);
         
+        // Get current aToken balance before supply
+        uint256 aTokenBalanceBefore = IERC20(ATOKEN).balanceOf(address(this));
+        
         // Supply to Aave
         POOL.supply(UNDERLYING_TOKEN, amount, address(this), 0);
+        
+        // Calculate actual aTokens received (should be 1:1 in mock)
+        uint256 aTokensReceived = IERC20(ATOKEN).balanceOf(address(this)) - aTokenBalanceBefore;
+        require(aTokensReceived > 0, "No aTokens received");
         
         totalAssets += amount;
         emit Deposited(msg.sender, amount);
@@ -88,14 +94,27 @@ contract AaveVault is ReentrancyGuard, Ownable {
         require(amount > 0, "Amount must be > 0");
         require(amount <= getTotalValue(), "Insufficient balance");
         
+        // Get current balances and total value
+        uint256 tokenBalanceBefore = IERC20(UNDERLYING_TOKEN).balanceOf(address(this));
+        uint256 aTokenBalanceBefore = IERC20(ATOKEN).balanceOf(address(this));
+        
         // Withdraw from Aave
-        uint256 withdrawn = POOL.withdraw(UNDERLYING_TOKEN, amount, address(this));
+        POOL.withdraw(UNDERLYING_TOKEN, amount, address(this));
         
-        // Transfer tokens to sender
-        IERC20(UNDERLYING_TOKEN).safeTransfer(msg.sender, withdrawn);
+        // Calculate actual tokens received
+        uint256 tokensReceived = IERC20(UNDERLYING_TOKEN).balanceOf(address(this)) - tokenBalanceBefore;
+        require(tokensReceived > 0, "No tokens received");
         
-        totalAssets = getTotalValue(); // Update total assets precisely
-        emit Withdrawn(msg.sender, withdrawn);
+        // Calculate aTokens burned
+        uint256 aTokensBurned = aTokenBalanceBefore - IERC20(ATOKEN).balanceOf(address(this));
+        
+        // Update total assets to reflect the withdrawal
+        totalAssets -= amount;
+        
+        // Transfer tokens to owner
+        IERC20(UNDERLYING_TOKEN).safeTransfer(msg.sender, tokensReceived);
+        
+        emit Withdrawn(msg.sender, tokensReceived);
     }
     
     /**
@@ -146,6 +165,9 @@ contract AaveVault is ReentrancyGuard, Ownable {
      * @return Total value in underlying tokens
      */
     function getTotalValue() public view returns (uint256) {
+        // The total value is the sum of:
+        // 1. Underlying tokens held by the vault
+        // 2. The value of aTokens held by the vault (1 aToken = 1 underlying token)
         return IERC20(UNDERLYING_TOKEN).balanceOf(address(this)) + 
                IERC20(ATOKEN).balanceOf(address(this));
     }
@@ -166,20 +188,26 @@ contract AaveVault is ReentrancyGuard, Ownable {
      * @notice Emergency withdraw all funds
      */
     function emergencyWithdraw() external onlyOwner nonReentrant {
-        // Withdraw from Aave
+        // Get initial balances
         uint256 aTokenBalance = IERC20(ATOKEN).balanceOf(address(this));
+        uint256 initialBalance = IERC20(UNDERLYING_TOKEN).balanceOf(address(this));
+        
+        // Withdraw from Aave
         if (aTokenBalance > 0) {
             POOL.withdraw(UNDERLYING_TOKEN, type(uint256).max, owner());
         }
         
         // Transfer any remaining tokens
-        uint256 balance = IERC20(UNDERLYING_TOKEN).balanceOf(address(this));
-        if (balance > 0) {
-            IERC20(UNDERLYING_TOKEN).safeTransfer(owner(), balance);
+        uint256 remainingBalance = IERC20(UNDERLYING_TOKEN).balanceOf(address(this));
+        if (remainingBalance > 0) {
+            IERC20(UNDERLYING_TOKEN).safeTransfer(owner(), remainingBalance);
         }
         
+        // Calculate total withdrawn amount
+        uint256 totalWithdrawn = remainingBalance - initialBalance + aTokenBalance;
+        
         totalAssets = 0;
-        emit EmergencyWithdrawn(balance + aTokenBalance);
+        emit EmergencyWithdrawn(totalWithdrawn);
     }
     
     /**

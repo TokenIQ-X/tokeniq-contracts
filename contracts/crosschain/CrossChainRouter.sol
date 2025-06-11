@@ -33,6 +33,12 @@ contract CrossChainRouter is CCIPReceiver, ReentrancyGuard, Ownable {
         address token,
         uint256 amount
     );
+    event TokensSent(
+        address indexed sender,
+        uint64 indexed destinationChainSelector,
+        address token,
+        uint256 amount
+    );
     event MessageReceived(
         bytes32 indexed messageId,
         uint64 indexed sourceChainSelector,
@@ -41,6 +47,8 @@ contract CrossChainRouter is CCIPReceiver, ReentrancyGuard, Ownable {
     );
     event ChainSupported(uint64 chainSelector, bool supported);
     event TokenSupported(address token, bool supported);
+    event LinkWithdrawn(address indexed to, uint256 amount);
+    event ERC20Withdrawn(address indexed token, address indexed to, uint256 amount);
 
     // Errors
     error NotEnoughBalance(uint256 currentBalance, uint256 calculatedFees);
@@ -50,11 +58,13 @@ contract CrossChainRouter is CCIPReceiver, ReentrancyGuard, Ownable {
     error SourceChainNotAllowlisted(uint64 sourceChainSelector);
     error SenderNotAllowlisted(address sender);
     error InvalidReceiverAddress();
+    error InvalidAmount();
 
     constructor(
         address _router,
         address _linkToken
-    ) CCIPReceiver(_router) Ownable() {
+    ) CCIPReceiver(_router) {
+        if (_linkToken == address(0)) revert InvalidRouter(address(0));
         router = IRouterClient(_router);
         linkToken = LinkTokenInterface(_linkToken);
     }
@@ -69,13 +79,13 @@ contract CrossChainRouter is CCIPReceiver, ReentrancyGuard, Ownable {
         uint64 destinationChainSelector,
         address token,
         uint256 amount
-    ) external nonReentrant returns (bytes32 messageId) {
+    ) external returns (bytes32 messageId) {
         if (!supportedChains[destinationChainSelector])
             revert DestinationChainNotAllowlisted(destinationChainSelector);
         if (!supportedTokens[token])
             revert SenderNotAllowlisted(token);
         if (amount == 0)
-            revert InvalidReceiverAddress();
+            revert InvalidAmount();
 
         // Transfer tokens from sender
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
@@ -113,6 +123,13 @@ contract CrossChainRouter is CCIPReceiver, ReentrancyGuard, Ownable {
 
         emit MessageSent(
             messageId,
+            destinationChainSelector,
+            token,
+            amount
+        );
+
+        emit TokensSent(
+            msg.sender,
             destinationChainSelector,
             token,
             amount
@@ -203,6 +220,7 @@ contract CrossChainRouter is CCIPReceiver, ReentrancyGuard, Ownable {
     function withdrawLink(uint256 amount) external onlyOwner {
         if (amount == 0) revert NothingToWithdraw();
         if (!linkToken.transfer(msg.sender, amount)) revert FailedToWithdrawEth(msg.sender, address(linkToken), amount);
+        emit LinkWithdrawn(msg.sender, amount);
     }
 
     /**
@@ -216,5 +234,6 @@ contract CrossChainRouter is CCIPReceiver, ReentrancyGuard, Ownable {
     ) external onlyOwner {
         if (amount == 0) revert NothingToWithdraw();
         IERC20(token).safeTransfer(msg.sender, amount);
+        emit ERC20Withdrawn(token, msg.sender, amount);
     }
 }
