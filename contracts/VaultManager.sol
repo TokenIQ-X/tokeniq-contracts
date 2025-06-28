@@ -247,3 +247,4 @@ interface IStrategy {
     function getTargetAllocation() external view returns (uint256);
     function rebalance() external;
 }
+

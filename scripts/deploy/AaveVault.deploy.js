@@ -5,7 +5,7 @@ async function main() {
 
   // Constructor arguments for AaveVault
   const constructorArgs = [
-    "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", // USDC token
+    "0x4B8eed87b61023F5BEcCeBd2868C058FEe6B7Ac7", // USDC token
     "0x16dA4541aD1807f4443d92D26044C1147406EB80", // aUSDC token
     "0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951", // Aave Pool
     "0xA2F78ab2355fe2f984D808B5CeE7FD0A93D5270E"  // USDC/USD Price Feed

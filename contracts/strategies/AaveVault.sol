@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import "../interfaces/ISimpleAavePool.sol";
 
@@ -12,7 +13,7 @@ import "../interfaces/ISimpleAavePool.sol";
  * @title AaveVault
  * @notice Optimized strategy contract for Aave V3 integration
  */
-contract AaveVault is ReentrancyGuard, Ownable {
+contract AaveVault is ReentrancyGuard, Ownable, Initializable {
     using SafeERC20 for IERC20;
 
     // Aave pool interface
@@ -41,6 +42,15 @@ contract AaveVault is ReentrancyGuard, Ownable {
     event Rebalanced(uint256 oldAllocation, uint256 newAllocation);
     event AllocationChanged(uint256 newAllocation);
     event EmergencyWithdrawn(uint256 amount);
+    
+    /**
+     * @dev Initializes the vault (called by the factory)
+     * @param _treasuryAIManager Address of the Treasury AI Manager
+     */
+    function initialize(address _treasuryAIManager) public initializer {
+        require(_treasuryAIManager != address(0), "Invalid Treasury AI Manager");
+        _transferOwnership(msg.sender);
+    }
     
     constructor(
         address _underlyingToken,

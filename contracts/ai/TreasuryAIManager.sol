@@ -89,7 +89,7 @@ contract TreasuryAIManager is Ownable, AutomationCompatibleInterface {
      */
     function checkUpkeep(
         bytes calldata /* checkData */
-    ) external view override returns (bool upkeepNeeded, bytes memory /* performData */) {
+    ) external view virtual override returns (bool upkeepNeeded, bytes memory /* performData */) {
         // Check if enough time has passed since last update
         if (block.timestamp >= lastUpdate + UPDATE_INTERVAL) {
             return (true, "");
@@ -100,7 +100,7 @@ contract TreasuryAIManager is Ownable, AutomationCompatibleInterface {
     /**
      * @notice Perform AI update (Chainlink Automation)
      */
-    function performUpkeep(bytes calldata /* performData */) external override {
+    function performUpkeep(bytes calldata /* performData */) external virtual override {
         // Update market data
         _updateMarketData();
         
@@ -193,6 +193,43 @@ contract TreasuryAIManager is Ownable, AutomationCompatibleInterface {
                 );
             }
         }
+    }
+    
+    /**
+     * @notice Process a decision from the service layer
+     * @dev This function should be called by the service layer to process decisions
+     * @param decisionId ID of the decision to process
+     * @param strategy The strategy address
+     * @param allocation The allocation amount
+     * @param reason The reason for the decision
+     */
+    function processDecision(
+        bytes32 decisionId,
+        address strategy,
+        uint256 allocation,
+        string calldata reason
+    ) external virtual {
+        require(msg.sender == serviceLayer, "Only service layer");
+        require(!processedDecisions[decisionId], "Decision already processed");
+        require(supportedStrategies[strategy], "Strategy not supported");
+        require(allocation <= MAX_BPS, "Invalid allocation");
+        
+        // Update the decision
+        StrategyDecision[] storage decisions = strategyDecisions[strategy];
+        bool found = false;
+        
+        for (uint i = 0; i < decisions.length; i++) {
+            if (decisions[i].decisionId == decisionId) {
+                decisions[i].allocation = allocation;
+                decisions[i].reason = reason;
+                found = true;
+                break;
+            }
+        }
+        
+        require(found, "Decision not found");
+        processedDecisions[decisionId] = true;
+        emit DecisionProcessed(decisionId);
     }
     
     /**

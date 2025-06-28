@@ -33,7 +33,7 @@ This repository contains the core smart contracts that power TokenIQ, including 
     - [0x7CC324d15E5fF17c43188fB63b462B9a79dA68f6](https://sepolia.basescan.org/address/0x7CC324d15E5fF17c43188fB63b462B9a79dA68f6#code)
 
 ## 📁 Project Structure
-
+```
 contracts/
 │
 ├── VaultManager.sol # Main user deposit, vault, and yield routing logic
@@ -56,7 +56,7 @@ contracts/
 │
 └── governance/ # Optional governance and reward token logic
 └── TokenIQToken.sol
-
+```
 ---
 
 ## 🧠 Core Contracts
