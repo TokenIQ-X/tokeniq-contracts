@@ -6,6 +6,7 @@ This document provides a guide for frontend developers to interact with the Toke
 
 ### AaveVault
 - **Ethereum Sepolia:** [0xB791Be1D932397e3eFa757C8d4B9F6BAC86F1Ca1](https://sepolia.etherscan.io/address/0xB791Be1D932397e3eFa757C8d4B9F6BAC86F1Ca1#code)
+- **Avalanche Fuji:** [0x16A54CdEcf7e051084B3CfEC169249e170121A8B](https://testnet.snowtrace.io/address/0x16A54CdEcf7e051084B3CfEC169249e170121A8B#code)
 
 ### CrossChainRouter
 - **Ethereum Sepolia:** [0xD1d6EE0c5309A09Df9ca4c2936956A49cca9eb71](https://sepolia.etherscan.io/address/0xD1d6EE0c5309A09Df9ca4c2936956A49cca9eb71#code)

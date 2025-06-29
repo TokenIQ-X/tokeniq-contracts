@@ -44,8 +44,11 @@ describe("VaultFactory", function () {
         vaultFactory = await VaultFactory.deploy();
         await vaultFactory.waitForDeployment();
         
+        // Initialize the VaultFactory with the owner's address
+        await vaultFactory.initialize(owner.address);
+        
         // Set the treasury AI manager address
-        await vaultFactory.setTreasuryAIManager(await treasuryAIManager.getAddress());
+        await vaultFactory.connect(owner).setTreasuryAIManager(await treasuryAIManager.getAddress());
         
         // Deploy mock vault implementations
         const MockVault = await ethers.getContractFactory("MockAaveVault");

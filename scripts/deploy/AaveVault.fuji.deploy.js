@@ -6,9 +6,9 @@ async function main() {
   // Fuji Testnet addresses
   const fujiAddresses = {
     USDC: "0x5425890298aed601595a70AB815c96711a31Bc65",  // Fuji USDC
-    aUSDC: "0x4bf77086885FfAEEe27bCBc98c2D109CA55FfE8f",  // Fuji aUSDC
-    aavePool: "0x90Bf86247b6d1d6c5E8E083966ED9cf8b978E8c9",  // Fuji Aave Pool
-    priceFeed: "0x7898AcCC83587C3C55116c5230C17a193aD8c03F"   // Fuji USDC/USD Price Feed
+    aUSDC: "0x7bA2e5c37C4151d654Fcc4b41ffF3Fe693c23852",  // Fuji aUSDC
+    aavePool: "0x794a61358D6845594F94dc1DB02A252b5b4814aD",  // Fuji Aave Pool
+    priceFeed: "0x97FE42a7E96640D932bbc0e1580c73E705A8EB73"   // Fuji USDC/USD Price Feed
   };
 
   // Constructor arguments for AaveVault on Fuji

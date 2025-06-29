@@ -23,12 +23,14 @@ This repository contains the core smart contracts that power TokenIQ, including 
 ### AaveVault 
 - Ethereum Sepolia 
     - [0xB791Be1D932397e3eFa757C8d4B9F6BAC86F1Ca1](https://sepolia.etherscan.io/address/0xB791Be1D932397e3eFa757C8d4B9F6BAC86F1Ca1#code)
+- Avalanche Fuji
+    - [0x16A54CdEcf7e051084B3CfEC169249e170121A8B](https://testnet.snowtrace.io/address/0x16A54CdEcf7e051084B3CfEC169249e170121A8B#code)
 
 ### CrossChainRouter
 - Ethereum Sepolia
     - [0xD1d6EE0c5309A09Df9ca4c2936956A49cca9eb71](https://sepolia.etherscan.io/address/0xD1d6EE0c5309A09Df9ca4c2936956A49cca9eb71#code)
 - Avalanche Fuji
-    - [0x6444f16e29Bf33a8C9da2B89E472b58Bafe41b9c](https://testnet.snowtrace.io/address/0x6444f16e29Bf33a8C9da2B89E472b58Bafe41b9c#code)
+    - [0x9EFb119c507CEa769b4277D6eC42274096579ce9](https://testnet.snowtrace.io/address/0x9EFb119c507CEa769b4277D6eC42274096579ce9#code)
 - Base Sepolia
     - [0x7CC324d15E5fF17c43188fB63b462B9a79dA68f6](https://sepolia.basescan.org/address/0x7CC324d15E5fF17c43188fB63b462B9a79dA68f6#code)
 

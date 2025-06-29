@@ -1,20 +1,17 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity ^0.8.27;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/proxy/Clones.sol";
-import "./strategies/AaveVault.sol";
-import "./strategies/CurveVault.sol";
-import "./strategies/RWAInvoiceVault.sol";
-import "./ai/TreasuryAIManager.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "./interfaces/ITreasuryAIManager.sol";
 
 /**
  * @title VaultFactory
  * @notice Factory contract for creating and managing different types of vaults
  */
-contract VaultFactory is Ownable {
-    using Clones for address;
+contract VaultFactory is Initializable, OwnableUpgradeable {
+    using ClonesUpgradeable for address;
 
     // Vault implementation addresses
     address public aaveVaultImplementation;
@@ -22,7 +19,7 @@ contract VaultFactory is Ownable {
     address public rwaVaultImplementation;
     
     // Treasury AI Manager
-    address public treasuryAIManager;
+    ITreasuryAIManager public treasuryAIManager;
     
     // Mapping of vault type to implementation
     mapping(string => address) public vaultImplementations;
@@ -35,67 +32,81 @@ contract VaultFactory is Ownable {
     
     // Events
     event VaultCreated(address indexed vault, string vaultType, address indexed creator);
-    event ImplementationUpdated(string vaultType, address implementation);
+    event VaultImplementationSet(string indexed vaultType, address implementation);
     event TreasuryAIManagerUpdated(address treasuryAIManager);
     
-    constructor() Ownable() {}
-    
-    /**
-     * @notice Set the implementation address for a vault type
-     * @param _vaultType Type of vault (e.g., "aave", "curve", "rwa")
-     * @param _implementation Address of the implementation contract
-     */
-    function setVaultImplementation(string memory _vaultType, address _implementation) external onlyOwner {
-        require(_implementation != address(0), "Invalid implementation address");
-        vaultImplementations[_vaultType] = _implementation;
-        emit ImplementationUpdated(_vaultType, _implementation);
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
     }
     
     /**
-     * @notice Set the Treasury AI Manager address
+     * @notice Initialize the VaultFactory
      * @param _treasuryAIManager Address of the Treasury AI Manager
+     */
+    function initialize(address _treasuryAIManager) public initializer {
+        __Ownable_init();
+        
+        require(_treasuryAIManager != address(0), "Invalid Treasury AI Manager");
+        treasuryAIManager = ITreasuryAIManager(_treasuryAIManager);
+    }
+    
+    /**
+     * @notice Set the implementation address for a vault type
+     * @param vaultType Type of vault (e.g., "aave", "curve", "rwa")
+     * @param implementation Address of the vault implementation
+     */
+    function setVaultImplementation(string calldata vaultType, address implementation) external onlyOwner {
+        require(implementation != address(0), "Invalid implementation address");
+        
+        if (keccak256(bytes(vaultType)) == keccak256(bytes("aave"))) {
+            aaveVaultImplementation = implementation;
+        } else if (keccak256(bytes(vaultType)) == keccak256(bytes("curve"))) {
+            curveVaultImplementation = implementation;
+        } else if (keccak256(bytes(vaultType)) == keccak256(bytes("rwa"))) {
+            rwaVaultImplementation = implementation;
+        } else {
+            revert("Unsupported vault type");
+        }
+        
+        vaultImplementations[vaultType] = implementation;
+        emit VaultImplementationSet(vaultType, implementation);
+    }
+    
+    /**
+     * @notice Update the Treasury AI Manager address
+     * @param _treasuryAIManager Address of the new Treasury AI Manager
      */
     function setTreasuryAIManager(address _treasuryAIManager) external onlyOwner {
         require(_treasuryAIManager != address(0), "Invalid Treasury AI Manager address");
-        treasuryAIManager = _treasuryAIManager;
+        treasuryAIManager = ITreasuryAIManager(_treasuryAIManager);
         emit TreasuryAIManagerUpdated(_treasuryAIManager);
     }
     
     /**
      * @notice Create a new vault of the specified type
-     * @param _vaultType Type of vault to create (e.g., "aave", "curve", "rwa")
+     * @param vaultType Type of vault to create (e.g., "aave", "curve", "rwa")
      * @return Address of the newly created vault
      */
-    function createVault(string memory _vaultType) external onlyOwner returns (address) {
-        address implementation = vaultImplementations[_vaultType];
+    function createVault(string calldata vaultType) external returns (address) {
+        address implementation = vaultImplementations[vaultType];
         require(implementation != address(0), "Vault type not supported");
         
         // Clone the implementation
         address clone = implementation.clone();
         
-        // Initialize the clone based on vault type
-        if (keccak256(bytes(_vaultType)) == keccak256(bytes("aave"))) {
-            AaveVault(clone).initialize(treasuryAIManager);
-        } else if (keccak256(bytes(_vaultType)) == keccak256(bytes("curve"))) {
-            CurveVault(clone).initialize(treasuryAIManager);
-        } else if (keccak256(bytes(_vaultType)) == keccak256(bytes("rwa"))) {
-            RWAInvoiceVault(clone).initialize(treasuryAIManager);
-        }
+        // Initialize the clone with the treasuryAIManager
+        (bool success, ) = clone.call(
+            abi.encodeWithSignature("initialize(address)", address(treasuryAIManager))
+        );
+        require(success, "Vault initialization failed");
         
         // Store vault information
         allVaults.push(clone);
-        vaultTypes[clone] = _vaultType;
+        vaultTypes[clone] = vaultType;
         
-        emit VaultCreated(clone, _vaultType, msg.sender);
+        emit VaultCreated(clone, vaultType, msg.sender);
         return clone;
-    }
-    
-    /**
-     * @notice Get the total number of vaults created
-     * @return Number of vaults
-     */
-    function getVaultCount() external view returns (uint256) {
-        return allVaults.length;
     }
     
     /**
