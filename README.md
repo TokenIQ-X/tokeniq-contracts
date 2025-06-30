@@ -1,6 +1,5 @@
 # 🧠 TokenIQ Protocol Smart Contracts
-
-TokenIQ is an AI-driven, B2B decentralized finance platform that helps businesses, DAOs, and funds convert idle capital and real-world assets into smart, productive, yield-bearing instruments.
+TokenIQ is an AI-driven, decentralized finance platform that helps businesses, DAOs, and funds convert idle capital and real-world assets into smart, productive, yield-bearing instruments.
 
 This repository contains the core smart contracts that power TokenIQ, including the vault logic, yield strategies, tokenized asset layer, and Chainlink integrations.
 
