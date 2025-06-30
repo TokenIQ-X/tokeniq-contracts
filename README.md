@@ -17,6 +17,37 @@ This repository contains the core smart contracts that power TokenIQ, including 
 
 ---
 
+## 📊 Simulation
+
+To run a local simulation of TokenIQ's trade finance capabilities, follow these steps:
+
+1. **Install Dependencies** (if not already installed):
+   ```bash
+   npm install
+   ```
+
+2. **Run the Simulation**:
+   ```bash
+   ./run_simulation.sh
+   ```
+   This will:
+   - Start a local Hardhat node
+   - Deploy the necessary contracts
+   - Execute the trade finance simulation
+   - Display the results in your terminal
+
+3. **View the Simulation Output**:
+   The script will show you a step-by-step simulation of how TokenIQ transforms traditional trade finance, including:
+   - Invoice tokenization
+   - Cross-chain capital deployment
+   - AI-driven treasury management
+   - Yield generation and distribution
+
+   The node will automatically shut down when the simulation completes.
+
+> 💡 **Note**: Make sure you have Node.js (v16+) and npm installed on your system.
+
+
 ## Deployed contracts 
 
 ### AaveVault 
