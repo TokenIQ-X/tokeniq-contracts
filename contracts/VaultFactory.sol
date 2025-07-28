@@ -17,6 +17,7 @@ contract VaultFactory is Initializable, OwnableUpgradeable {
     address public aaveVaultImplementation;
     address public curveVaultImplementation;
     address public rwaVaultImplementation;
+    address public btcfiVaultImplementation;
     
     // Treasury AI Manager
     ITreasuryAIManager public treasuryAIManager;
@@ -44,7 +45,7 @@ contract VaultFactory is Initializable, OwnableUpgradeable {
      * @notice Initialize the VaultFactory
      * @param _treasuryAIManager Address of the Treasury AI Manager
      */
-    function initialize(address _treasuryAIManager) public initializer {
+    function initialize(address _treasuryAIManager) external initializer {
         __Ownable_init();
         
         require(_treasuryAIManager != address(0), "Invalid Treasury AI Manager");
@@ -52,24 +53,29 @@ contract VaultFactory is Initializable, OwnableUpgradeable {
     }
     
     /**
-     * @notice Set the implementation address for a vault type
-     * @param vaultType Type of vault (e.g., "aave", "curve", "rwa")
-     * @param implementation Address of the vault implementation
+     * @notice Set the implementation address for a specific vault type
+     * @param vaultType Type of vault (e.g., "aave", "curve", "rwa", "btcfi")
+     * @param implementation Address of the implementation contract
      */
     function setVaultImplementation(string calldata vaultType, address implementation) external onlyOwner {
         require(implementation != address(0), "Invalid implementation address");
         
+        // Store implementation
+        vaultImplementations[vaultType] = implementation;
+        
+        // Also store in specific variable for easier access
         if (keccak256(bytes(vaultType)) == keccak256(bytes("aave"))) {
             aaveVaultImplementation = implementation;
         } else if (keccak256(bytes(vaultType)) == keccak256(bytes("curve"))) {
             curveVaultImplementation = implementation;
         } else if (keccak256(bytes(vaultType)) == keccak256(bytes("rwa"))) {
             rwaVaultImplementation = implementation;
+        } else if (keccak256(bytes(vaultType)) == keccak256(bytes("btcfi"))) {
+            btcfiVaultImplementation = implementation;
         } else {
             revert("Unsupported vault type");
         }
         
-        vaultImplementations[vaultType] = implementation;
         emit VaultImplementationSet(vaultType, implementation);
     }
     
@@ -85,28 +91,27 @@ contract VaultFactory is Initializable, OwnableUpgradeable {
     
     /**
      * @notice Create a new vault of the specified type
-     * @param vaultType Type of vault to create (e.g., "aave", "curve", "rwa")
-     * @return Address of the newly created vault
+     * @param vaultType Type of vault to create (e.g., "aave", "curve", "rwa", "btcfi")
+     * @return vault Address of the newly created vault
      */
-    function createVault(string calldata vaultType) external returns (address) {
+    function createVault(string calldata vaultType) external returns (address vault) {
+        // Get implementation address
         address implementation = vaultImplementations[vaultType];
-        require(implementation != address(0), "Vault type not supported");
+        require(implementation != address(0), "Unsupported vault type");
         
         // Clone the implementation
-        address clone = implementation.clone();
+        vault = implementation.clone();
         
-        // Initialize the clone with the treasuryAIManager
-        (bool success, ) = clone.call(
-            abi.encodeWithSignature("initialize(address)", address(treasuryAIManager))
-        );
+        // Initialize the vault
+        (bool success, ) = vault.call(abi.encodeWithSignature("initialize(address)", address(treasuryAIManager)));
         require(success, "Vault initialization failed");
         
-        // Store vault information
-        allVaults.push(clone);
-        vaultTypes[clone] = vaultType;
+        // Store vault info
+        allVaults.push(vault);
+        vaultTypes[vault] = vaultType;
         
-        emit VaultCreated(clone, vaultType, msg.sender);
-        return clone;
+        emit VaultCreated(vault, vaultType, msg.sender);
+        return vault;
     }
     
     /**

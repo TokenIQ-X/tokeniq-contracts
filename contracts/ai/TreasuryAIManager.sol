@@ -20,7 +20,7 @@ contract TreasuryAIManager is Ownable, AutomationCompatibleInterface {
         string reason;
         bytes32 decisionId;     // Unique identifier for the decision
     }
-    
+    // 
     struct MarketData {
         uint256 price;
         uint256 volatility;
