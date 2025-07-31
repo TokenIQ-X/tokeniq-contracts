@@ -241,7 +241,6 @@ contract AssetTokenization is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard
         super._burn(tokenId);
     }
     
-    // Override required by Solidity
     function tokenURI(uint256 tokenId)
         public
         view
@@ -249,6 +248,15 @@ contract AssetTokenization is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard
         returns (string memory)
     {
         return super.tokenURI(tokenId);
+    }
+    
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721, ERC721URIStorage)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
     }
     
     // Override transfer to prevent transfer of collateralized assets

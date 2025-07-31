@@ -18,6 +18,17 @@ module.exports = {
     }
   },
   networks: {
+    // Core Testnet 2
+    coreTestnet2: {
+      url: "https://rpc.test2.btcs.network",
+      accounts: [PRIVATE_KEY],
+      chainId: 1114,
+      verify: {
+        etherscan: {
+          apiKey: process.env.BTCS_API_KEY
+        }
+      }
+    },
     // Ethereum Sepolia
     sepolia: {
       url: `https://sepolia.infura.io/v3/${INFURA_API_KEY}`,

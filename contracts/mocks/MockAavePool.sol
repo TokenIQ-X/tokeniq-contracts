@@ -23,6 +23,9 @@ contract MockAavePool is ISimpleAavePool {
     // Track aToken balances per user (aToken address => user address => balance)
     mapping(address => mapping(address => uint256)) public aTokenBalances;
 
+    // Track total staked amount
+    uint256 public totalStaked;
+
     event Supply(
         address indexed reserve,
         address user,
@@ -66,12 +69,11 @@ contract MockAavePool is ISimpleAavePool {
         bool success = token.transferFrom(msg.sender, address(this), amount);
         require(success, "Transfer failed");
         
-        // Update user's balance and total supply
-        userBalances[onBehalfOf] += amount;
-        tokenBalances[asset] += amount;
-        
-        // Update aToken balance for the user
+        // Update user's aToken balance (this represents the staked amount)
         aTokenBalances[aToken][onBehalfOf] += amount;
+        
+        // Update total staked amount
+        totalStaked += amount;
         
         // Mint aTokens to the onBehalfOf address
         IAToken(aToken).mint(onBehalfOf, amount);
@@ -92,15 +94,16 @@ contract MockAavePool is ISimpleAavePool {
         uint256 withdrawAmount = amount == type(uint256).max ? userATokenBalance : amount;
         require(userATokenBalance >= withdrawAmount, "Insufficient aToken balance");
         
-        uint256 availableLiquidity = tokenBalances[asset];
-        require(availableLiquidity >= withdrawAmount, "Insufficient liquidity in pool");
+        // In the mock, we don't need to track availableLiquidity since we're just simulating
+        // the Aave protocol's behavior
         
         IERC20 token = IERC20(asset);
         
         // Burn aTokens from the sender
         aTokenBalances[aToken][msg.sender] = userATokenBalance - withdrawAmount;
-        userBalances[msg.sender] -= withdrawAmount;
-        tokenBalances[asset] = availableLiquidity - withdrawAmount;
+        
+        // Update total staked amount
+        totalStaked -= withdrawAmount;
         
         // Actually burn the aTokens
         IAToken(aToken).burn(msg.sender, withdrawAmount);
