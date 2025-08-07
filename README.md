@@ -3,6 +3,197 @@ TokenIQ is an AI-driven, decentralized finance platform that helps businesses, D
 
 This repository contains the core smart contracts that power TokenIQ, including the vault logic, yield strategies, tokenized asset layer, and Chainlink integrations.
 
+## 📍 Core Testnet Deployment
+
+### Contract Addresses
+
+#### Token Templates
+- **ERC20VaultToken**: [0xC310b43748E5303F1372Ab2C9075629E0Bb4FE54](https://scan.test2.btcs.network/address/0xC310b43748E5303F1372Ab2C9075629E0Bb4FE54)
+- **ERC721CollateralNFT**: [0xc4d732199B7d21207a74CFE6CEd4d17dD330C7Ea](https://scan.test2.btcs.network/address/0xc4d732199B7d21207a74CFE6CEd4d17dD330C7Ea)
+- **ERC1155HybridAsset**: [0xc9C0Fb76a50eAb570665977703cC8f7185c082b5](https://scan.test2.btcs.network/address/0xc9C0Fb76a50eAb570665977703cC8f7185c082b5)
+
+#### AssetFactory
+- **Proxy**: [0x02406b6d17E743deA7fBbfAE8A15c82e4481E168](https://scan.test2.btcs.network/address/0x02406b6d17E743deA7fBbfAE8A15c82e4481E168)
+- **Implementation**: [0x89C3FBe736EDa478967Ac19Ca8634D3562881f6F](https://scan.test2.btcs.network/address/0x89C3FBe736EDa478967Ac19Ca8634D3562881f6F)
+
+### Verification Commands
+
+To verify the contracts on Core Testnet, run:
+
+```bash
+# Verify ERC20VaultToken
+npx hardhat verify --network coreTestnet2 0xC310b43748E5303F1372Ab2C9075629E0Bb4FE54 "Vault Token Template" "VLT" 0x0000000000000000000000000000000000000000 "0" 0x60eF148485C2a5119fa52CA13c52E9fd98F28e87
+
+# Verify ERC721CollateralNFT
+npx hardhat verify --network coreTestnet2 0xc4d732199B7d21207a74CFE6CEd4d17dD330C7Ea "Collateral NFT" "CNFT" 0x60eF148485C2a5119fa52CA13c52E9fd98F28e87 "https://api.tokeniq.xyz/nfts/" 0 0x60eF148485C2a5119fa52CA13c52E9fd98F28e87
+
+# Verify ERC1155HybridAsset
+npx hardhat verify --network coreTestnet2 0xc9C0Fb76a50eAb570665977703cC8f7185c082b5 "https://api.tokeniq.xyz/assets/" "0x60eF148485C2a5119fa52CA13c52E9fd98F28e87" 0 "0x60eF148485C2a5119fa52CA13c52E9fd98F28e87"
+
+# Verify AssetFactory Implementation
+npx hardhat verify --network coreTestnet2 0x89C3FBe736EDa478967Ac19Ca8634D3562881f6F
+```
+
+### Deployment Scripts
+
+- Deploy templates: `npx hardhat run scripts/deploy/DeployTemplates.coreTestnet.js --network coreTestnet2`
+- Deploy AssetFactory: `npx hardhat run scripts/deploy/DeployAssetFactory.coreTestnet.js --network coreTestnet2`
+
+## 🔌 Frontend Integration Guide
+
+### Prerequisites
+```bash
+npm install ethers @web3-react/core @web3-react/injected-connector
+```
+
+### Initializing Web3 Provider
+```javascript
+import { ethers } from 'ethers';
+import { Web3Provider } from '@ethersproject/providers';
+import { InjectedConnector } from '@web3-react/injected-connector';
+
+export const injected = new InjectedConnector({
+  supportedChainIds: [1115] // Core Testnet chain ID
+});
+
+// Initialize provider
+const getLibrary = (provider) => {
+  return new Web3Provider(provider);
+};
+```
+
+### Interacting with AssetFactory
+```javascript
+import { Contract } from 'ethers';
+import AssetFactoryABI from './abis/AssetFactory.json';
+
+const ASSET_FACTORY_ADDRESS = '0x02406b6d17E743deA7fBbfAE8A15c82e4481E168';
+
+// Create contract instance
+const assetFactory = new Contract(
+  ASSET_FACTORY_ADDRESS,
+  AssetFactoryABI,
+  provider.getSigner()
+);
+
+// Create a new ERC20 Vault Token
+const createVaultToken = async (name, symbol, underlying) => {
+  const tx = await assetFactory.createERC20VaultToken(
+    name,
+    symbol,
+    underlying,
+    10,    // 0.1% deposit fee
+    5,     // 0.05% withdrawal fee
+    200    // 2% performance fee
+  );
+  return tx.wait();
+};
+
+// Get all assets created by an address
+const getUserAssets = async (address) => {
+  return await assetFactory.getAssetsByCreator(address);
+};
+```
+
+### Interacting with Deployed Tokens
+```javascript
+// ERC20VaultToken ABI
+const ERC20VaultTokenABI = [
+  'function deposit(uint256 assets, address receiver) returns (uint256)',
+  'function withdraw(uint256 assets, address receiver, address owner) returns (uint256)',
+  'function balanceOf(address) view returns (uint256)',
+  'function totalAssets() view returns (uint256)'
+];
+
+// Deposit into vault
+const depositToVault = async (vaultAddress, amount) => {
+  const vault = new Contract(vaultAddress, ERC20VaultTokenABI, provider.getSigner());
+  const tx = await vault.deposit(amount, await signer.getAddress());
+  return tx.wait();
+};
+
+// Get vault balance
+const getVaultBalance = async (vaultAddress, userAddress) => {
+  const vault = new Contract(vaultAddress, ERC20VaultTokenABI, provider);
+  return await vault.balanceOf(userAddress);
+};
+```
+
+### Listening to Events
+```javascript
+// Listen for new asset creation
+assetFactory.on('AssetCreated', (assetAddress, creator, tokenType, name, symbol, event) => {
+  console.log(`New ${tokenType} created:`, { assetAddress, creator, name, symbol });
+});
+
+// Listen for deposits
+const vault = new Contract(vaultAddress, ERC20VaultTokenABI, provider);
+vault.on('Deposit', (sender, owner, assets, shares, event) => {
+  console.log('Deposit event:', { sender, owner, assets: assets.toString(), shares: shares.toString() });
+});
+```
+
+### Error Handling
+```javascript
+try {
+  const tx = await depositToVault(vaultAddress, amount);
+  console.log('Transaction successful:', tx.transactionHash);
+} catch (error) {
+  console.error('Transaction failed:', error);
+  if (error.code === 4001) {
+    console.log('User rejected the transaction');
+  } else if (error.code === -32603) {
+    console.log('Insufficient funds or gas');
+  }
+}
+```
+
+### Best Practices
+1. Always validate user input and contract state before sending transactions
+2. Use proper error boundaries in your React components
+3. Cache contract instances and ABIs where possible
+4. Implement loading states for all async operations
+5. Use proper type checking with TypeScript for better developer experience
+
+### Example React Hook
+```javascript
+import { useState, useEffect } from 'react';
+import { useWeb3React } from '@web3-react/core';
+
+export function useVaultBalance(vaultAddress) {
+  const { library, account } = useWeb3React();
+  const [balance, setBalance] = useState('0');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (!library || !account) return;
+      
+      const vault = new Contract(vaultAddress, ERC20VaultTokenABI, library);
+      const userBalance = await vault.balanceOf(account);
+      setBalance(ethers.utils.formatUnits(userBalance, 8)); // 8 decimals for WBTC
+      setLoading(false);
+    };
+
+    fetchBalance();
+    
+    // Listen for transfer events
+    const onTransfer = (from, to, value) => {
+      if (from === account || to === account) {
+        fetchBalance();
+      }
+    };
+    
+    vault.on('Transfer', onTransfer);
+    return () => {
+      vault.off('Transfer', onTransfer);
+    };
+  }, [library, account, vaultAddress]);
+
+  return { balance, loading };
+}
+```
+
 ---
 
 ## 🔗 Live for: Chainlink Fall Hackathon 2025

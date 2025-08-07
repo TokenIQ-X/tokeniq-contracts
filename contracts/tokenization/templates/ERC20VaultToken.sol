@@ -1,24 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
  * @title ERC20VaultToken
  * @notice ERC20 token representing shares in a vault that earns yield on deposited assets
  * @dev Implements EIP-4626 Vault standard with additional features
  */
-contract ERC20VaultToken is Initializable, ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
-    using MathUpgradeable for uint256;
+contract ERC20VaultToken is ERC20, Ownable, ReentrancyGuard {
+    using SafeERC20 for IERC20;
+    using Math for uint256;
 
     // The underlying asset token
-    IERC20Upgradeable public asset;
+    IERC20 public asset;
     
     // Fee configuration
     struct FeeConfig {
@@ -68,15 +67,6 @@ contract ERC20VaultToken is Initializable, ERC20Upgradeable, OwnableUpgradeable,
     event FeeRecipientUpdated(address newFeeRecipient);
 
     /**
-     * @dev Constructor is only used for the implementation contract.
-     * The proxy will use the initialize function instead.
-     */
-    constructor() {
-        // Lock the implementation contract
-        _disableInitializers();
-    }
-    
-    /**
      * @notice Initialize the vault with the underlying asset and fee configuration
      * @param _name Name of the vault token
      * @param _symbol Symbol of the vault token
@@ -84,13 +74,13 @@ contract ERC20VaultToken is Initializable, ERC20Upgradeable, OwnableUpgradeable,
      * @param _feeConfig Fee configuration (deposit, withdrawal, performance)
      * @param _owner Owner of the vault
      */
-    function initialize(
+    constructor(
         string memory _name,
         string memory _symbol,
         address _asset,
         FeeConfig memory _feeConfig,
         address _owner
-    ) public initializer {
+    ) ERC20(_name, _symbol) {
         require(_asset != address(0), "Invalid asset address");
         require(_owner != address(0), "Invalid owner address");
         require(
@@ -100,11 +90,7 @@ contract ERC20VaultToken is Initializable, ERC20Upgradeable, OwnableUpgradeable,
             "Fees too high"
         );
 
-        __ERC20_init(_name, _symbol);
-        __Ownable_init();
-        __ReentrancyGuard_init();
-
-        asset = IERC20Upgradeable(_asset);
+        asset = IERC20(_asset);
         feeConfig = _feeConfig;
         feeRecipient = _owner;
         lastHarvest = block.timestamp;
@@ -133,7 +119,7 @@ contract ERC20VaultToken is Initializable, ERC20Upgradeable, OwnableUpgradeable,
      */
     function convertToShares(uint256 assets) public view returns (uint256) {
         uint256 supply = totalSupply();
-        return supply == 0 ? assets : assets.mulDiv(supply, totalAssets(), MathUpgradeable.Rounding.Down);
+        return supply == 0 ? assets : assets.mulDiv(supply, totalAssets());
     }
     
     /**
@@ -143,7 +129,7 @@ contract ERC20VaultToken is Initializable, ERC20Upgradeable, OwnableUpgradeable,
      */
     function convertToAssets(uint256 shares) public view returns (uint256) {
         uint256 supply = totalSupply();
-        return supply == 0 ? shares : shares.mulDiv(totalAssets(), supply, MathUpgradeable.Rounding.Down);
+        return supply == 0 ? shares : shares.mulDiv(totalAssets(), supply);
     }
     
     /**
@@ -165,7 +151,7 @@ contract ERC20VaultToken is Initializable, ERC20Upgradeable, OwnableUpgradeable,
         uint256 supply = totalSupply();
         return supply == 0 
             ? shares 
-            : shares.mulDiv(totalAssets() + 1, supply, MathUpgradeable.Rounding.Up);
+            : shares.mulDiv(totalAssets() + 1, supply);
     }
     
     // ============ Public Mutative Functions ============
@@ -223,7 +209,7 @@ contract ERC20VaultToken is Initializable, ERC20Upgradeable, OwnableUpgradeable,
         uint256 supply = totalSupply();
         assets = supply == 0 
             ? shares 
-            : shares.mulDiv(totalAssets() + 1, supply, MathUpgradeable.Rounding.Up);
+            : shares.mulDiv(totalAssets() + 1, supply);
         
         uint256 fee = _calculateFee(assets, feeConfig.depositFeeBasisPoints);
         assets += fee;
@@ -401,7 +387,7 @@ contract ERC20VaultToken is Initializable, ERC20Upgradeable, OwnableUpgradeable,
      * @return feeAmount Fee amount
      */
     function _calculateFee(uint256 amount, uint256 feeBasisPoints) internal pure returns (uint256) {
-        return amount.mulDiv(feeBasisPoints, MAX_FEE, MathUpgradeable.Rounding.Down);
+        return amount.mulDiv(feeBasisPoints, MAX_FEE);
     }
     
     /**

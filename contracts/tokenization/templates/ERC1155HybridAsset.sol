@@ -7,6 +7,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 
 /**
@@ -18,7 +19,8 @@ contract ERC1155HybridAsset is
     Initializable,
     ERC1155Upgradeable, 
     OwnableUpgradeable, 
-    ReentrancyGuardUpgradeable 
+    ReentrancyGuardUpgradeable,
+    UUPSUpgradeable
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
@@ -60,7 +62,7 @@ contract ERC1155HybridAsset is
     
     // Token state
     mapping(uint256 => TokenInfo) public tokenInfo;
-    uint256 public nextTokenId = 1; // Starting token ID (0 is not used)
+    uint256 public nextTokenId; // Starting token ID (0 is not used)
     
     // Collateral state
     mapping(uint256 => mapping(address => Collateral[])) private _tokenCollaterals;
@@ -150,21 +152,25 @@ contract ERC1155HybridAsset is
      * @param _mintingFee Default minting fee in basis points
      * @param _feeRecipient Address to receive fees
      */
-    function initialize(
+    function initializeHybridAsset(
         string memory _uri,
         address _owner,
         uint256 _mintingFee,
         address _feeRecipient
     ) external initializer {
+        // Initialize parent contracts
+        __ERC1155_init(_uri);
+        __Ownable_init();
+        __ReentrancyGuard_init();
+        __UUPSUpgradeable_init();
+        
         require(_owner != address(0), "Invalid owner address");
         require(_feeRecipient != address(0), "Invalid fee recipient");
         require(_mintingFee <= 1000, "Minting fee too high"); // Max 10%
         
-        // Set URI
-        _setURI(_uri);
-        
-        // Set fee configuration
+        // Initialize state variables
         feeRecipient = _feeRecipient;
+        nextTokenId = 1; // Initialize nextTokenId
         
         // Create a default fungible token (ID 0 is not used, start from 1)
         _createToken("Hybrid Asset", "HYBRID", TokenType.Fungible, type(uint256).max, _mintingFee);
@@ -607,4 +613,19 @@ contract ERC1155HybridAsset is
      * @dev Required to receive native tokens
      */
     receive() external payable {}
+    
+    // ============ Upgrade Functions ============
+    
+    /**
+     * @dev Authorize the upgrade. Only the owner can upgrade the implementation.
+     * @param newImplementation Address of the new implementation
+     */
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+    
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[50] private __gap;
 }

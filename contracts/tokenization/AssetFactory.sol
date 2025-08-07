@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "@openzeppelin/contracts/proxy/Clones.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 import "./templates/ERC20VaultToken.sol";
 import "./templates/ERC721CollateralNFT.sol";
 import "./templates/ERC1155HybridAsset.sol";
@@ -13,8 +14,8 @@ import "./templates/ERC1155HybridAsset.sol";
  * @notice Factory contract for deploying minimal proxy clones of token templates
  * @dev Manages the deployment of ERC20, ERC721, and ERC1155 token contracts
  */
-contract AssetFactory is Ownable, ReentrancyGuard {
-    using Clones for address;
+contract AssetFactory is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+    using ClonesUpgradeable for address;
     
     // Template contracts
     address public erc20VaultTokenImpl;
@@ -68,22 +69,25 @@ contract AssetFactory is Ownable, ReentrancyGuard {
     );
     
     /**
-     * @dev Constructor for the AssetFactory
+     * @dev Initializer for the upgradeable AssetFactory
      * @param _erc20VaultTokenImpl Address of the ERC20VaultToken implementation
      * @param _erc721CollateralNFTImpl Address of the ERC721CollateralNFT implementation
      * @param _erc1155HybridAssetImpl Address of the ERC1155HybridAsset implementation
      * @param _owner Address of the contract owner
      */
-    constructor(
+    function initialize(
         address _erc20VaultTokenImpl,
         address _erc721CollateralNFTImpl,
         address _erc1155HybridAssetImpl,
         address _owner
-    ) {
+    ) public initializer {
         require(_erc20VaultTokenImpl != address(0), "Invalid ERC20 implementation");
         require(_erc721CollateralNFTImpl != address(0), "Invalid ERC721 implementation");
         require(_erc1155HybridAssetImpl != address(0), "Invalid ERC1155 implementation");
         require(_owner != address(0), "Invalid owner");
+        
+        __Ownable_init();
+        __ReentrancyGuard_init();
         
         // Set template implementations
         erc20VaultTokenImpl = _erc20VaultTokenImpl;
@@ -104,31 +108,36 @@ contract AssetFactory is Ownable, ReentrancyGuard {
      * @param name Name of the token
      * @param symbol Symbol of the token
      * @param underlying Underlying asset address
-     * @param feeConfig Fee configuration (deposit, withdrawal, performance)
+     * @param depositFeeBasisPoints Deposit fee in basis points (1/100 of a percent)
+     * @param withdrawalFeeBasisPoints Withdrawal fee in basis points (1/100 of a percent)
+     * @param performanceFeeBasisPoints Performance fee in basis points (1/100 of a percent)
      * @return Address of the deployed contract
      */
     function createERC20VaultToken(
         string memory name,
         string memory symbol,
         address underlying,
-        ERC20VaultToken.FeeConfig memory feeConfig
+        uint256 depositFeeBasisPoints,
+        uint256 withdrawalFeeBasisPoints,
+        uint256 performanceFeeBasisPoints
     ) external nonReentrant returns (address) {
-        // Deploy new proxy
-        address proxy = erc20VaultTokenImpl.clone();
-        
-        // Initialize the proxy
-        ERC20VaultToken(proxy).initialize(
+        // Create a new ERC20VaultToken directly (not using clones for now)
+        ERC20VaultToken newToken = new ERC20VaultToken(
             name,
             symbol,
             underlying,
-            feeConfig,
+            ERC20VaultToken.FeeConfig({
+                depositFeeBasisPoints: depositFeeBasisPoints,
+                withdrawalFeeBasisPoints: withdrawalFeeBasisPoints,
+                performanceFeeBasisPoints: performanceFeeBasisPoints
+            }),
             msg.sender
         );
         
         // Register the asset
-        _registerAsset(proxy, msg.sender, TokenType.ERC20, name, symbol);
+        _registerAsset(address(newToken), msg.sender, TokenType.ERC20, name, symbol);
         
-        return proxy;
+        return address(newToken);
     }
     
     /**
@@ -176,7 +185,7 @@ contract AssetFactory is Ownable, ReentrancyGuard {
         
         // Initialize the proxy
         ERC1155HybridAsset newHybridAsset = ERC1155HybridAsset(proxy);
-        newHybridAsset.initialize(
+        newHybridAsset.initializeHybridAsset(
             baseURI,
             msg.sender,     // Owner
             0,              // Initial minting fee (0%)

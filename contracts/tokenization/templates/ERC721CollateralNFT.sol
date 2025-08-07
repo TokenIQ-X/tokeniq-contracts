@@ -120,11 +120,10 @@ contract ERC721CollateralNFT is
     event CollateralTokenRemoved(address indexed token);
 
     /**
-     * @dev Constructor is only used for the implementation contract.
-     * The proxy will use the initialize function instead.
+     * @dev Disable initializers in the implementation contract
      */
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
-        // Lock the implementation contract
         _disableInitializers();
     }
     
@@ -145,17 +144,17 @@ contract ERC721CollateralNFT is
         uint256 _mintingFee,
         address _feeRecipient
     ) external initializer {
+        // Initialize parent contracts
         __ERC721_init(_name, _symbol);
         __ERC721Enumerable_init();
         __ERC721URIStorage_init();
         __Ownable_init();
         __ReentrancyGuard_init();
+        
+        // Validate parameters
         require(_owner != address(0), "Invalid owner address");
         require(_feeRecipient != address(0), "Invalid fee recipient");
         require(_mintingFee <= 1000, "Minting fee too high"); // Max 10%
-        
-        // Initialize ERC721
-        __ERC721_init(_name, _symbol);
         
         // Set base URI
         _baseTokenURI = baseURI_;
