@@ -48,7 +48,7 @@ module.exports = {
         network: "coreTestnet2",
         chainId: 1114,
         urls: {
-          apiURL: "https://scan.test2.btcs.network/api",
+          apiURL: "https://api.test2.btcs.network/api",
           browserURL: "https://scan.test2.btcs.network"
         }
       },

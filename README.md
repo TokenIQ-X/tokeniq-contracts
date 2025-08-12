@@ -435,3 +435,10 @@ DAO-based treasury strategy voting
 
 Integration with on-chain credit scores or reputation oracles
 
+
+npx hardhat verify --network coreTestnet2 0xC310b43748E5303F1372Ab2C9075629E0Bb4FE54 \
+  "Vault Token" \
+  "VLT" \
+  0x0000000000000000000000000000000000000000 \  
+  "0" \                                          
+  0x60eF148485C2a5119fa52CA13c52E9fd98F28e87      
