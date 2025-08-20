@@ -1,5 +1,6 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("@openzeppelin/hardhat-upgrades");
+require("hardhat-deploy");
 require("dotenv").config();
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
@@ -12,6 +13,28 @@ module.exports = {
       url: "https://rpc.test2.btcs.network",
       accounts: [PRIVATE_KEY],
       chainId: 1114
+    },
+    seitestnet: {
+      url: 'https://evm-rpc-testnet.sei-apis.com',
+      accounts: [PRIVATE_KEY],
+      chainId: 1328,
+      gasPrice: 2000000000, // 2 gwei
+      timeout: 120000, // 2 minutes
+      http: {
+        keepAlive: true,
+        timeout: 120000
+      },
+      throwOnTransactionFailures: true,
+      throwOnCallFailures: true,
+      allowUnlimitedContractSize: true,
+      blockGasLimit: 30000000,
+      gasMultiplier: 1.5
+    },
+    seimainnet: {
+      url: 'https://evm-rpc.sei-apis.com',
+      accounts: [PRIVATE_KEY],
+      chainId: 1329, // Sei mainnet chain ID
+      gasPrice: 2000000000 // 2 gwei = 2 nsei
     },
     sepolia: {
       url: `https://sepolia.infura.io/v3/${INFURA_API_KEY}`,
@@ -38,12 +61,21 @@ module.exports = {
   etherscan: {
     apiKey: {
       coreTestnet2: process.env.BTCS_API_KEY,
+      seitestnet: ETHERSCAN_API_KEY, 
       sepolia: ETHERSCAN_API_KEY,
       fuji: process.env.SNOWTRACE_API_KEY,
       arbitrumSepolia: process.env.ARBISCAN_API_KEY,
       baseSepolia: process.env.BASESCAN_API_KEY
     },
     customChains: [
+      {
+        network: "seitestnet",
+        chainId: 1328,
+        urls: {
+          apiURL: "https://seitrace.com/atlantic-2/api",
+          browserURL: "https://seitrace.com"
+        }
+      },
       {
         network: "coreTestnet2",
         chainId: 1114,
@@ -97,7 +129,7 @@ module.exports = {
   },
 
   mocha: {
-    timeout: 40000
+    timeout: 2000000
   }
 };
 
