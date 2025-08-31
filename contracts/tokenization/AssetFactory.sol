@@ -5,6 +5,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "./templates/ERC20VaultToken.sol";
 import "./templates/ERC721CollateralNFT.sol";
 import "./templates/ERC1155HybridAsset.sol";
@@ -14,7 +15,7 @@ import "./templates/ERC1155HybridAsset.sol";
  * @notice Factory contract for deploying minimal proxy clones of token templates
  * @dev Manages the deployment of ERC20, ERC721, and ERC1155 token contracts
  */
-contract AssetFactory is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract AssetFactory is Initializable,OwnableUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
     using ClonesUpgradeable for address;
     
     // Template contracts
@@ -88,6 +89,7 @@ contract AssetFactory is Initializable, OwnableUpgradeable, ReentrancyGuardUpgra
         
         __Ownable_init();
         __ReentrancyGuard_init();
+        __UUPSUpgradeable_init();
         
         // Set template implementations
         erc20VaultTokenImpl = _erc20VaultTokenImpl;
@@ -100,6 +102,13 @@ contract AssetFactory is Initializable, OwnableUpgradeable, ReentrancyGuardUpgra
         // Transfer ownership
         _transferOwnership(_owner);
     }
+
+    /// @dev required by UUPSUpgradeable
+    function _authorizeUpgrade(address newImplementation)
+        internal
+        override
+        onlyOwner
+    {}
     
     // ============ Asset Creation Functions ============
     
